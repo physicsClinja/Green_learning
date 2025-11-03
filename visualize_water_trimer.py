@@ -54,7 +54,7 @@ def _set_equal_aspect(ax, X, Y, Z):
 
 def plot_molecule(symbols, coords, save_path=None):
     import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 (needed for 3d projection)
+    from mpl_toolkits.mplot3d import Axes3D
 
     X = coords[:, 0]
     Y = coords[:, 1]
@@ -68,32 +68,23 @@ def plot_molecule(symbols, coords, save_path=None):
     idx_H = [i for i, s in enumerate(symbols) if s.upper().startswith('H')]
 
     # Draw bonds first so atom markers appear on top
-    # O-H bonds: assign each hydrogen to its nearest oxygen (one-to-one assignment per H)
-    if len(idx_O) > 0 and len(idx_H) > 0:
-        O_coords = coords[idx_O]
-        H_coords = coords[idx_H]
-        # For each H, find nearest O
-        assigned = {o_idx: [] for o_idx in idx_O}
-        for h_local_idx, h_idx in enumerate(idx_H):
-            h_coord = coords[h_idx]
-            dists = np.linalg.norm(O_coords - h_coord, axis=1)
-            oi = int(np.argmin(dists))
-            o_idx = idx_O[oi]
-            # Assign H to nearest O (no cutoff) so each H connects to exactly one O
-            assigned[o_idx].append(h_idx)
-        # Now draw O-H bonds for assigned hydrogen indices
-        for o_idx, h_list in assigned.items():
-            O_coord = coords[o_idx]
-            # If more than two Hs were assigned erroneously, keep the two closest
-            if len(h_list) > 2:
-                # sort by distance and keep two
-                h_list = sorted(h_list, key=lambda hi: np.linalg.norm(coords[hi] - O_coord))[:2]
-            for h_idx in h_list:
-                hx, hy, hz = coords[h_idx]
-                ox, oy, oz = O_coord
-                ax.plot([ox, hx], [oy, hy], [oz, hz], color='lightgray', linewidth=1.0, zorder=1)
-
-    # NOTE: O-O backbone lines removed per user request (no O-O bonds drawn).
+    # Robust rule: draw a single bond for each pair (i<j) only when one is O and the other is H
+    # and their distance is within a reasonable cutoff for an O-H bond. This avoids O-O lines
+    # and prevents double-plotting (which can make lines look darker).
+    bond_cutoff = 1.3  # angstrom, generous cutoff for O-H
+    n_atoms = len(symbols)
+    for i in range(n_atoms):
+        for j in range(i + 1, n_atoms):
+            si = symbols[i].upper()
+            sj = symbols[j].upper()
+            # Only consider O-H pairs
+            if (si.startswith('O') and sj.startswith('H')) or (si.startswith('H') and sj.startswith('O')):
+                di = coords[i]
+                dj = coords[j]
+                dist = np.linalg.norm(di - dj)
+                if dist <= bond_cutoff and dist > 0.0:
+                    # plot single bond once
+                    ax.plot([di[0], dj[0]], [di[1], dj[1]], [di[2], dj[2]], color='lightgray', linewidth=1.0, zorder=1)
 
     # Now draw atom markers on top of bonds
     if len(idx_O) > 0:

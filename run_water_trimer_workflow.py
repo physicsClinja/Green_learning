@@ -101,7 +101,7 @@ def save_to_xyz(mol, filename):
 
 
 def visualize_from_xyz(filename):
-    """Read an XYZ file and display a 3D plot with atoms and bonds (O-H and O-O).
+    """Read an XYZ file and display a 3D plot with atoms and bonds (only O-H).
 
     This uses matplotlib; it will call plt.show() at the end.
     """
@@ -154,12 +154,7 @@ def visualize_from_xyz(filename):
             ox, oy, oz = O_coord
             ax.plot([ox, hx], [oy, hy], [oz, hz], color='lightgray', linewidth=1.0, zorder=1)
 
-    # Draw O-O backbone (connect oxygens pairwise)
-    for i in range(len(idx_O)):
-        for j in range(i + 1, len(idx_O)):
-            o1 = coords[idx_O[i]]
-            o2 = coords[idx_O[j]]
-            ax.plot([o1[0], o2[0]], [o1[1], o2[1]], [o1[2], o2[2]], color='dimgray', linewidth=2.0, zorder=0)
+    # NOTE: Do not draw O-O backbone lines here — keep only O-H bonds in the visualization.
 
     # Draw atom markers on top
     if len(idx_O) > 0:
